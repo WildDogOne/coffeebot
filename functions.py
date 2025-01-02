@@ -7,28 +7,8 @@ def enable_plug(host):
     if request.status_code == 200:
         print("Turned On")
     else:
+        set_label("Error enabling plug")
         return f"Error: {request.status_code}, {request.text}"
-
-
-def watch_heatup(host):
-    go = True
-    check_down = 0
-    while go:
-        time.sleep(10)
-        status = get_plug_status(host)
-        Ws = float(status["Ws"])
-        power = float(status["power"])
-        print(f"{Ws} average since last call - {power} w")
-        if power < 800:
-            check_down += 1
-        elif check_down > 0:
-            check_down -= 1
-        if check_down == 10:
-            print("Coffee Maker Ready")
-            go = False
-        else:
-            print(f"Watt Check: {check_down}")
-    return True
 
 
 def disable_plug(host):
@@ -37,10 +17,21 @@ def disable_plug(host):
     if request.status_code == 200:
         print("Turned Off")
     else:
+        set_label("Error disabling plug")
         return f"Error: {request.status_code}, {request.text}"
     return "Turned Off"
 
 
 def get_plug_status(host):
     response = urequests.get(f"http://{host}/report")
-    return response.json()
+    if response.status_code == 200:
+        return response.json()
+    else:
+        set_label("Error getting Plug State")
+        return {"error": {"status": response.status_code, "text": response.text}}
+
+
+def set_label(text):
+    global label
+    if label:
+        label.set_text(text)

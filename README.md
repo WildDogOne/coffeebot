@@ -7,6 +7,6 @@ docker run \
     -v $(pwd):/work/disk/apps/coffeebot \
     --network=bridge \
     -e DISPLAY="10.0.0.10:0" \
-    vobot/mini-dock-app-dev:latest
+    vobot/mini-dock-app-dev:latest --publish 8080:80
 
 ```
