@@ -1,11 +1,10 @@
 application:
-  name: Countdown of App
+  name: CoffeeBot
   version: 1.0.0
-  description: Countdown is a minimalist countdown timer app powered by the LVGL graphics library, allowing users to set a timer and monitor countdowns through an intuitive interface.
-  author: Vobot
-  author_email: support@getvobot.com
-  bugs: https://github.com/myvobot/dock-mini-apps/issues
-  repository: https://github.com/myvobot/dock-mini-apps/tree/main/countdown
+  description: CoffeeBot enables you to turn on and off your brewer.
+  author: Linus
+  bugs: https://github.com/WildDogOne/coffeebot/issues
+  repository: https://github.com/WildDogOne/coffeebot/tree/main
   licenses: MIT
 
 system_requirements:

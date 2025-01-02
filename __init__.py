@@ -5,7 +5,7 @@ from apps.coffeebot.config import smartplug_ip
 
 
 # App Name
-NAME = "Countdown of App"
+NAME = "CoffeeBot"
 
 # LVGL widgets
 scr = None
@@ -53,11 +53,11 @@ def event_handler(event):
     if event.get_code() == lv.EVENT.KEY and event.get_key() == lv.KEY.ENTER:
         status = get_plug_status(smartplug_ip)
         if status["relay"]:
-            # disable_plug(smartplug_ip)
+            disable_plug(smartplug_ip)
             heating = False
         else:
             heating = True
-            # enable_plug(smartplug_ip)
+            enable_plug(smartplug_ip)
         boiler_ready = False
         brewgroup_ready = False
         update_label()
@@ -110,7 +110,9 @@ async def on_running_foreground():
         if timer > 10 and not boiler_ready:
             timer = 0
             status = get_plug_status(smartplug_ip)
-            if float(status["power"]) < 800:
+            if not status["relay"]:
+                enable_plug(smartplug_ip)
+            elif float(status["power"]) < 800:
                 consumption_low += 1
             elif consumption_low > 0:
                 consumption_low -= 1

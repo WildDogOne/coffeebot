@@ -1,16 +1,14 @@
 import time
 import urequests
 
+
 def enable_plug(host):
-    status = get_plug_status(host)
-    print(f"Enabling: {status['power']} - {status['Ws']}")
-    if status["relay"]:
-        print("Already on")
+    request = urequests.get(f"http://{host}/relay?state=1")
+    if request.status_code == 200:
+        print("Turned On")
     else:
-        print("Turning on")
-        urequests.get(f"http://{host}/relay?state=1")
-    print("Turned on Smartplug")
-    return True
+        return f"Error: {request.status_code}, {request.text}"
+
 
 def watch_heatup(host):
     go = True
@@ -32,16 +30,16 @@ def watch_heatup(host):
             print(f"Watt Check: {check_down}")
     return True
 
+
 def disable_plug(host):
-    status = get_plug_status(host)["relay"]
-    if status:
-        print("Turning off")
-        urequests.get(f"http://{host}/relay?state=0").status_code
-        return "Turned Off"
+    print("Turning off")
+    request = urequests.get(f"http://{host}/relay?state=0")
+    if request.status_code == 200:
+        print("Turned Off")
     else:
-        print("Already Off")
-        urequests.get(f"http://{host}/relay?state=0").status_code
-        return "Already Off"
+        return f"Error: {request.status_code}, {request.text}"
+    return "Turned Off"
+
 
 def get_plug_status(host):
     response = urequests.get(f"http://{host}/report")
