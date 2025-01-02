@@ -1,2 +1,12 @@
 # coffeebot
 Coffee via Vobot
+```
+
+docker run \
+    --rm -it \
+    -v $(pwd):/work/disk/apps/coffeebot \
+    --network=bridge \
+    -e DISPLAY="10.0.0.10:0" \
+    vobot/mini-dock-app-dev:latest
+
+```
