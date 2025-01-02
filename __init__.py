@@ -11,9 +11,6 @@ NAME = "Countdown of App"
 scr = None
 label = None
 
-# Countdown parameters
-remainder = 0
-
 app_mgr = None
 last_recorded_time = 0
 timer = 0
@@ -28,10 +25,10 @@ def get_settings_json():
         "form": [
             {
                 "type": "input",
-                "default": str(DEFAULT_REMAINDER),
-                "caption": "Countdown Timer Duration(s)",
-                "name": "remainder",
-                "attributes": {"maxLength": 6, "placeholder": "e.g., 300"},
+                "default": "192.168.1.1",
+                "caption": "Smartplug IP",
+                "name": "smartplug_ip",
+                "attributes": {"maxLength": 15, "placeholder": "e.g., 192.168.1.1"},
             }
         ]
     }
@@ -56,11 +53,11 @@ def event_handler(event):
     if event.get_code() == lv.EVENT.KEY and event.get_key() == lv.KEY.ENTER:
         status = get_plug_status(smartplug_ip)
         if status["relay"]:
-            disable_plug(smartplug_ip)
+            # disable_plug(smartplug_ip)
             heating = False
         else:
             heating = True
-            enable_plug(smartplug_ip)
+            # enable_plug(smartplug_ip)
         boiler_ready = False
         brewgroup_ready = False
         update_label()
@@ -102,21 +99,25 @@ async def on_start():
 
 async def on_running_foreground():
     """Called when the app is active, approximately every 200ms."""
-    global heating, consumption_low, brewgroup_ready, boiler_ready, last_recorded_time
+    global heating, consumption_low, brewgroup_ready, boiler_ready, last_recorded_time, timer
     if heating:
-        if last_recorded_time == 0:
-            last_recorded_time = time.time()
-        elapsed_time = time.time() - last_recorded_time
-        if elapsed_time > 10 and not boiler_ready:
-            elapsed_time = 0
+
+        current_time = time.ticks_ms()
+        elapsed_time = time.ticks_diff(current_time, last_recorded_time) / 10000000
+        if elapsed_time > 0:
+            timer = timer + elapsed_time
+
+        if timer > 10 and not boiler_ready:
+            timer = 0
             status = get_plug_status(smartplug_ip)
             if float(status["power"]) < 800:
                 consumption_low += 1
             elif consumption_low > 0:
                 consumption_low -= 1
-            last_recorded_time = time.time()
             if consumption_low == 10:
+                print("Boiler Ready")
                 boiler_ready = True
-        elif elapsed_time > 1200 and not brewgroup_ready:
+        elif timer > 1200 and not brewgroup_ready:
+            print("Brewgroup Ready")
             brewgroup_ready = True
     update_label()
