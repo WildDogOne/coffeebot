@@ -48,10 +48,10 @@ def update_label():
     body = f"Heating: {heating}\n"
     body += f"Brewgroup Ready: {brewgroup_ready}\n"
     body += f"Boiler Ready:{boiler_ready}\n"
-    body += f"Power: {status['power']}W\n"
+    body += f"Power: {status['power']:.0f}W\n"
     body += f"Plug State: {plug_state}\n"
     body += f"Plug IP: {smartplug_ip}\n"
-    if isinstance(start_heating, int) and start_heating > 0:
+    if isinstance(start_heating, float) and start_heating > 0:
         current = time.time()
         elapsed_time = current - start_heating
         body += f"Heating Time: {elapsed_time / 60:.0f}.{elapsed_time % 60:.0f}m\n"
@@ -142,11 +142,8 @@ async def on_running_foreground():
     if heating:
         current = time.time()
         elapsed_time = current - start
-        if elapsed_time > 1:
-            timer += elapsed_time
-        if timer > 10 and not boiler_ready:
+        if elapsed_time > 10 and not boiler_ready:
             print("Check Boiler Temp")
-            timer = 0
             start = time.time()
             status = get_plug_status(smartplug_ip)
             if not status["relay"]:
@@ -160,7 +157,7 @@ async def on_running_foreground():
                 print("Boiler Ready")
                 boiler_ready = True
                 scr.set_style_bg_color(lv.color_hex(0xFFA500), lv.PART.MAIN)
-        elif timer > 1200 and not brewgroup_ready:
+        elif elapsed_time > 1200 and not brewgroup_ready:
             scr.set_style_bg_color(lv.color_hex(0x98FB98), lv.PART.MAIN)
             print("Brewgroup Ready")
             brewgroup_ready = True
