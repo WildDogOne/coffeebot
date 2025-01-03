@@ -119,10 +119,11 @@ async def on_start():
 
 
 def stop_heating():
-    global heating, scr, boiler_ready, brewgroup_ready
+    global heating, scr, boiler_ready, brewgroup_ready, start_heating
     heating = False
     boiler_ready = False
     brewgroup_ready = False
+    start_heating = None
     scr.set_style_bg_color(lv.color_hex3(0x000), lv.PART.MAIN)
     update_label()
 
@@ -170,8 +171,8 @@ async def on_running_foreground():
         elif brewgroup_ready and boiler_ready:
             start = time.time()
             buzzbuzz()
-
     update_label()
+    time.sleep(1)
 
 
 def buzzbuzz():
