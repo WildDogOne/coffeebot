@@ -2,6 +2,7 @@ import time
 import time
 import urequests
 import lvgl as lv
+import peripherals
 
 # from apps.coffeebot.config import smartplug_ip
 
@@ -51,7 +52,9 @@ def update_label():
     body += f"Power: {status['power']:.0f}W\n"
     body += f"Plug State: {plug_state}\n"
     body += f"Plug IP: {smartplug_ip}\n"
-    if isinstance(start_heating, float) and start_heating > 0:
+    if (
+        isinstance(start_heating, float) or isinstance(start_heating, int)
+    ) and start_heating > 0:
         current = time.time()
         elapsed_time = current - start_heating
         body += f"Heating Time: {elapsed_time / 60:.0f}.{elapsed_time % 60:.0f}m\n"
@@ -157,12 +160,29 @@ async def on_running_foreground():
                 print("Boiler Ready")
                 boiler_ready = True
                 scr.set_style_bg_color(lv.color_hex(0xFFA500), lv.PART.MAIN)
+                buzzbuzz()
         elif elapsed_time > 1200 and not brewgroup_ready:
             scr.set_style_bg_color(lv.color_hex(0x98FB98), lv.PART.MAIN)
             print("Brewgroup Ready")
             brewgroup_ready = True
+            buzzbuzz()
 
     update_label()
+
+
+def buzzbuzz():
+    if peripherals.buzzer.enabled:
+        # Get buzzer control
+        peripherals.buzzer.acquire()
+
+        # Set buzzer frequency
+        peripherals.buzzer.set_freq(400)
+
+        # Set buzzer volume
+        peripherals.buzzer.set_volume(100)
+
+        # Release buzzer control
+        peripherals.buzzer.release()
 
 
 def enable_plug(host):
