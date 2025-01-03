@@ -172,7 +172,7 @@ async def on_running_foreground():
             start = time.time()
             buzzbuzz()
     update_label()
-    time.sleep(1)
+    time.sleep(0.8)
 
 
 def buzzbuzz():
