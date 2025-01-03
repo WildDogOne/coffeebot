@@ -146,14 +146,14 @@ async def on_running_foreground():
     if heating:
         current = time.time()
         elapsed_time = current - start
-        if elapsed_time > 10 and not boiler_ready:
+        status = get_plug_status(smartplug_ip)
+        if not status["relay"]:
+            print("Machine is off?")
+            stop_heating()
+        elif elapsed_time > 10 and not boiler_ready:
             print("Check Boiler Temp")
             start = time.time()
-            status = get_plug_status(smartplug_ip)
-            if not status["relay"]:
-                print("Machine is off?")
-                stop_heating()
-            elif float(status["power"]) < 800:
+            if float(status["power"]) < 800:
                 consumption_low += 1
             elif consumption_low > 0:
                 consumption_low -= 1
