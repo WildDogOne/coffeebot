@@ -46,8 +46,8 @@ def update_label():
     else:
         plug_state = "Disabled"
     body = f"Heating: {heating}\n"
-    body += f"Brewgroup Ready: {brewgroup_ready}\n"
     body += f"Boiler Ready:{boiler_ready}\n"
+    body += f"Brewgroup Ready: {brewgroup_ready}\n"
     body += f"Power: {status['power']:.0f}W\n"
     body += f"Plug State: {plug_state}\n"
     body += f"Plug IP: {smartplug_ip}\n"
@@ -121,6 +121,7 @@ def stop_heating():
     brewgroup_ready = False
     timer_start_heating = None
     scr.set_style_bg_color(lv.color_hex3(0x000), lv.PART.MAIN)
+    scr.set_style_text_color(lv.color_hex3(0xFFF), lv.PART.MAIN) 
     update_label()
 
 
@@ -164,6 +165,7 @@ def check_heating(status):
     elif elapsed_time > 1200 and not brewgroup_ready:
         timer_start = time.time()
         scr.set_style_bg_color(lv.color_hex(0x98FB98), lv.PART.MAIN)
+        scr.set_style_text_color(lv.color_hex(0x000000), lv.PART.MAIN)  # Set text color to black
         print("Brewgroup Ready")
         brewgroup_ready = True
         buzzbuzz()
