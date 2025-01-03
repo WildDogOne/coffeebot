@@ -1,5 +1,4 @@
 import time
-import time
 import urequests
 import lvgl as lv
 import peripherals
@@ -20,9 +19,9 @@ heating = False
 consumption_low = 0
 boiler_ready = False
 brewgroup_ready = False
-smartplug_ip = None
-start_heating = None
-start = None
+smartplug_ip = "192.168.1.118"
+timer_start_heating = None
+timer_start = None
 
 
 def get_settings_json():
@@ -40,7 +39,7 @@ def get_settings_json():
 
 
 def update_label():
-    global heating, brewgroup_ready, boiler_ready, start_heating
+    global heating, brewgroup_ready, boiler_ready, timer_start_heating
     status = get_plug_status(smartplug_ip)
     if status["relay"]:
         plug_state = "Enabled"
@@ -53,10 +52,10 @@ def update_label():
     body += f"Plug State: {plug_state}\n"
     body += f"Plug IP: {smartplug_ip}\n"
     if (
-        isinstance(start_heating, float) or isinstance(start_heating, int)
-    ) and start_heating > 0:
+        isinstance(timer_start_heating, float) or isinstance(timer_start_heating, int)
+    ) and timer_start_heating > 0:
         current = time.time()
-        elapsed_time = current - start_heating
+        elapsed_time = current - timer_start_heating
         body += f"Heating Time: {elapsed_time / 60:.0f}.{elapsed_time % 60:.0f}m\n"
     set_label(body)
 
@@ -113,66 +112,79 @@ async def on_start():
         group.add_obj(scr)
         lv.group_focus_obj(scr)
         group.set_editing(True)
-    status = get_plug_status(smartplug_ip)
-    if status["relay"]:
-        start_heating()
 
 
 def stop_heating():
-    global heating, scr, boiler_ready, brewgroup_ready, start_heating
+    global heating, scr, boiler_ready, brewgroup_ready, timer_start_heating
     heating = False
     boiler_ready = False
     brewgroup_ready = False
-    start_heating = None
+    timer_start_heating = None
     scr.set_style_bg_color(lv.color_hex3(0x000), lv.PART.MAIN)
     update_label()
 
 
 def start_heating():
-    global heating, scr, boiler_ready, brewgroup_ready, start_heating, start
+    global heating, scr, boiler_ready, brewgroup_ready, timer_start_heating, timer_start
     heating = True
     boiler_ready = False
     brewgroup_ready = False
-    start_heating = time.time()
-    start = time.time()
+    timer_start_heating = time.time()
+    timer_start = time.time()
     scr.set_style_bg_color(lv.color_hex(0xFA8072), lv.PART.MAIN)
     update_label()
 
 
+async def get_status():
+    status = get_plug_status(smartplug_ip)
+    return status
+
+
+def check_heating(status):
+    global consumption_low, brewgroup_ready, boiler_ready, scr, timer_start
+    current = time.time()
+    elapsed_time = current - timer_start
+    print(elapsed_time)
+
+    if not status["relay"]:
+        print("Machine is off?")
+        stop_heating()
+    elif elapsed_time > 10 and not boiler_ready:
+        print("Check Boiler Temp")
+        timer_start = time.time()
+        if float(status["power"]) < 800:
+            consumption_low += 1
+        elif consumption_low > 0:
+            consumption_low -= 1
+        if consumption_low == 10:
+            print("Boiler Ready")
+            boiler_ready = True
+            scr.set_style_bg_color(lv.color_hex(0xFFA500), lv.PART.MAIN)
+            buzzbuzz()
+    elif elapsed_time > 1200 and not brewgroup_ready:
+        timer_start = time.time()
+        scr.set_style_bg_color(lv.color_hex(0x98FB98), lv.PART.MAIN)
+        print("Brewgroup Ready")
+        brewgroup_ready = True
+        buzzbuzz()
+    elif brewgroup_ready and boiler_ready:
+        timer_start = time.time()
+        buzzbuzz()
+
+
 async def on_running_foreground():
     """Called when the app is active, approximately every 200ms."""
-    global heating, consumption_low, brewgroup_ready, boiler_ready, scr, start_heating, start, smartplug_ip, timer
+    global heating, smartplug_ip
+
+    status = get_plug_status(smartplug_ip)
+
+    if status["relay"] and not heating:
+        start_heating()
 
     if heating:
-        current = time.time()
-        elapsed_time = current - start
-        status = get_plug_status(smartplug_ip)
-        if not status["relay"]:
-            print("Machine is off?")
-            stop_heating()
-        elif elapsed_time > 10 and not boiler_ready:
-            print("Check Boiler Temp")
-            start = time.time()
-            if float(status["power"]) < 800:
-                consumption_low += 1
-            elif consumption_low > 0:
-                consumption_low -= 1
-            if consumption_low == 10:
-                print("Boiler Ready")
-                boiler_ready = True
-                scr.set_style_bg_color(lv.color_hex(0xFFA500), lv.PART.MAIN)
-                buzzbuzz()
-        elif elapsed_time > 1200 and not brewgroup_ready:
-            start = time.time()
-            scr.set_style_bg_color(lv.color_hex(0x98FB98), lv.PART.MAIN)
-            print("Brewgroup Ready")
-            brewgroup_ready = True
-            buzzbuzz()
-        elif brewgroup_ready and boiler_ready:
-            start = time.time()
-            buzzbuzz()
+        check_heating(status)
+
     update_label()
-    time.sleep(0.8)
 
 
 def buzzbuzz():
