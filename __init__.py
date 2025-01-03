@@ -19,7 +19,7 @@ heating = False
 consumption_low = 0
 boiler_ready = False
 brewgroup_ready = False
-smartplug_ip = "192.168.1.118"
+smartplug_ip = None
 timer_start_heating = None
 timer_start = None
 
