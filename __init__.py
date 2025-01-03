@@ -162,9 +162,13 @@ async def on_running_foreground():
                 scr.set_style_bg_color(lv.color_hex(0xFFA500), lv.PART.MAIN)
                 buzzbuzz()
         elif elapsed_time > 1200 and not brewgroup_ready:
+            start = time.time()
             scr.set_style_bg_color(lv.color_hex(0x98FB98), lv.PART.MAIN)
             print("Brewgroup Ready")
             brewgroup_ready = True
+            buzzbuzz()
+        elif brewgroup_ready and boiler_ready:
+            start = time.time()
             buzzbuzz()
 
     update_label()
