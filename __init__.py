@@ -3,8 +3,6 @@ import urequests
 import lvgl as lv
 import peripherals
 
-# from apps.coffeebot.config import smartplug_ip
-
 # App Name
 NAME = "CoffeeBot"
 
@@ -19,9 +17,11 @@ heating = False
 consumption_low = 0
 boiler_ready = False
 brewgroup_ready = False
-smartplug_ip = None
+smartplug_ip = "192.168.1.118"
 timer_start_heating = None
 timer_start = None
+last_status_pull = None
+status = None
 
 
 def get_settings_json():
@@ -40,7 +40,7 @@ def get_settings_json():
 
 def update_label():
     global heating, brewgroup_ready, boiler_ready, timer_start_heating
-    status = get_plug_status(smartplug_ip)
+    status = get_status()
     if status["relay"]:
         plug_state = "Enabled"
     else:
@@ -63,7 +63,7 @@ def update_label():
 def event_handler(event):
     global heating, boiler_ready, brewgroup_ready, scr
     if event.get_code() == lv.EVENT.KEY and event.get_key() == lv.KEY.ENTER:
-        status = get_plug_status(smartplug_ip)
+        status = get_status()
         if status["relay"]:
             disable_plug(smartplug_ip)
             stop_heating()
@@ -115,29 +115,38 @@ async def on_start():
 
 
 def stop_heating():
-    global heating, scr, boiler_ready, brewgroup_ready, timer_start_heating
+    global heating, scr, boiler_ready, brewgroup_ready, timer_start_heating, status
     heating = False
     boiler_ready = False
     brewgroup_ready = False
     timer_start_heating = None
+    status = None
     scr.set_style_bg_color(lv.color_hex3(0x000), lv.PART.MAIN)
-    scr.set_style_text_color(lv.color_hex3(0xFFF), lv.PART.MAIN) 
+    scr.set_style_text_color(lv.color_hex3(0xFFF), lv.PART.MAIN)
     update_label()
 
 
 def start_heating():
-    global heating, scr, boiler_ready, brewgroup_ready, timer_start_heating, timer_start
+    global heating, scr, boiler_ready, brewgroup_ready, timer_start_heating, timer_start, status
     heating = True
     boiler_ready = False
     brewgroup_ready = False
+    status = None
     timer_start_heating = time.time()
     timer_start = time.time()
     scr.set_style_bg_color(lv.color_hex(0xFA8072), lv.PART.MAIN)
     update_label()
 
 
-async def get_status():
-    status = get_plug_status(smartplug_ip)
+def get_status():
+    global last_status_pull, status, smartplug_ip
+    if not last_status_pull:
+        last_status_pull = time.time()
+    current = time.time()
+    elapsed_time = current - last_status_pull
+    if elapsed_time > 5 or not status:
+        last_status_pull = time.time()
+        status = get_plug_status(smartplug_ip)
     return status
 
 
@@ -165,11 +174,13 @@ def check_heating(status):
     elif elapsed_time > 1200 and not brewgroup_ready:
         timer_start = time.time()
         scr.set_style_bg_color(lv.color_hex(0x98FB98), lv.PART.MAIN)
-        scr.set_style_text_color(lv.color_hex(0x000000), lv.PART.MAIN)  # Set text color to black
+        scr.set_style_text_color(
+            lv.color_hex(0x000000), lv.PART.MAIN
+        )  # Set text color to black
         print("Brewgroup Ready")
         brewgroup_ready = True
         buzzbuzz()
-    elif brewgroup_ready and boiler_ready:
+    elif brewgroup_ready and boiler_ready and elapsed_time > 60 * 5:
         timer_start = time.time()
         buzzbuzz()
 
@@ -178,7 +189,7 @@ async def on_running_foreground():
     """Called when the app is active, approximately every 200ms."""
     global heating, smartplug_ip
 
-    status = get_plug_status(smartplug_ip)
+    status = get_status()
 
     if status["relay"] and not heating:
         start_heating()
