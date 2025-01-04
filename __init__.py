@@ -23,6 +23,7 @@ timer_start = None
 last_status_pull = None
 status = None
 power_graph = []
+power_graph_updated = False
 graph_enabled = False
 chart = None
 series = None
@@ -44,29 +45,35 @@ def get_settings_json():
 
 def display_graph():
     # Chart help: https://docs.lvgl.io/8.2/widgets/extra/chart.html
-    global power_graph, scr, chart, series
-    graph_offset = 50
+    global power_graph, scr, chart, series, power_graph_updated
+    if power_graph_updated:
+        print("Updating chart")
+        graph_offset = 0
+        power_graph_updated = False
 
-    # Create a chart if it doesn't exist
-    if not chart:
-        chart = lv.chart(lv.scr_act())
-        chart.set_size(320-graph_offset, 240)
-        # chart.center()
-        chart.align(lv.ALIGN.CENTER, int(graph_offset/2), 0)
-        chart.set_range(lv.chart.AXIS.PRIMARY_Y, 0, 1000)
-        chart.set_axis_tick(lv.chart.AXIS.PRIMARY_Y, 3, 0, 5, 1, True, graph_offset)
-        # Add a data series if it doesn't exist
-        series = chart.add_series(lv.color_hex(0xFF0000), lv.chart.AXIS.PRIMARY_Y)
+        # Create a chart if it doesn't exist
+        if not chart:
+            chart = lv.chart(lv.scr_act())
+            chart.set_size(320 - graph_offset, 240)
+            chart.center()
+            #chart.align(lv.ALIGN.CENTER, int(graph_offset / 2), 0)
+            chart.set_range(lv.chart.AXIS.PRIMARY_Y, 0, 1300)
+            # TODO: Figure out how to set the number of ticks
+            # LVGL v9.1 uses scale instead of set_axis_tick
+            #chart.set_axis_tick(lv.chart.AXIS.PRIMARY_Y, 3, 0, 5, 1, True, graph_offset)
+            #chart.set_total_tick_count(lv.chart.AXIS.PRIMARY_Y, 5)
+            # Add a data series if it doesn't exist
+            series = chart.add_series(lv.color_hex(0xFF0000), lv.chart.AXIS.PRIMARY_Y)
 
-    # Clear the existing data points
-    chart.set_point_count(len(power_graph))
-    chart.set_all_value(series, 0)
+        # Clear the existing data points
+        chart.set_point_count(len(power_graph))
+        chart.set_all_value(series, 0)
 
-    # Set data points
-    for value in power_graph:
-        value = int(value)
-        chart.set_next_value(series, value)
-    chart.refresh()
+        # Set data points
+        for value in power_graph:
+            value = int(value)
+            chart.set_next_value(series, value)
+        chart.refresh()
 
 
 def set_background_color():
@@ -94,6 +101,7 @@ def update_label():
     set_background_color()
     if graph_enabled:
         display_graph()
+
     elif chart:
         print("Deleted chart")
         chart.delete()
@@ -204,7 +212,7 @@ def start_heating():
 
 
 def get_status():
-    global last_status_pull, status, smartplug_ip, power_graph, heating
+    global last_status_pull, status, smartplug_ip, power_graph, heating, power_graph_updated
     if not last_status_pull:
         last_status_pull = time.time()
     current = time.time()
@@ -214,6 +222,7 @@ def get_status():
         status = get_plug_status(smartplug_ip)
         if heating:
             power_graph.append(status["power"])
+            power_graph_updated = True
     return status
 
 
