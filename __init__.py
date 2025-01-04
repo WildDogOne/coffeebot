@@ -45,12 +45,16 @@ def get_settings_json():
 def display_graph():
     # Chart help: https://docs.lvgl.io/8.2/widgets/extra/chart.html
     global power_graph, scr, chart, series
+    graph_offset = 50
 
     # Create a chart if it doesn't exist
     if not chart:
         chart = lv.chart(lv.scr_act())
-        chart.set_size(320, 240)
-        chart.center()
+        chart.set_size(320-graph_offset, 240)
+        # chart.center()
+        chart.align(lv.ALIGN.CENTER, int(graph_offset/2), 0)
+        chart.set_range(lv.chart.AXIS.PRIMARY_Y, 0, 1000)
+        chart.set_axis_tick(lv.chart.AXIS.PRIMARY_Y, 3, 0, 5, 1, True, graph_offset)
         # Add a data series if it doesn't exist
         series = chart.add_series(lv.color_hex(0xFF0000), lv.chart.AXIS.PRIMARY_Y)
 
@@ -65,8 +69,29 @@ def display_graph():
     chart.refresh()
 
 
+def set_background_color():
+    global scr, heating, graph_enabled, brewgroup_ready, boiler_ready
+    # Set Background to Black if graph enabled
+    if graph_enabled:
+        scr.set_style_bg_color(lv.color_hex(0x00000), lv.PART.MAIN)
+    else:
+        # Set background color to red if heating and not ready
+        if heating and not brewgroup_ready and not boiler_ready:
+            scr.set_style_bg_color(lv.color_hex(0xFA8072), lv.PART.MAIN)
+        # Set background color to orange if heating and boiler ready but not brewgroup
+        if heating and brewgroup_ready and not boiler_ready:
+            scr.set_style_bg_color(lv.color_hex(0xFFA500), lv.PART.MAIN)
+        # Set background color to green if heating and both boiler and brewgroup ready
+        if heating and brewgroup_ready and boiler_ready:
+            scr.set_style_bg_color(lv.color_hex(0x98FB98), lv.PART.MAIN)
+            scr.set_style_text_color(
+                lv.color_hex(0x000000), lv.PART.MAIN
+            )  # Set text color to black
+
+
 def update_label():
     global heating, brewgroup_ready, boiler_ready, timer_start_heating, graph_enabled, chart
+    set_background_color()
     if graph_enabled:
         display_graph()
     elif chart:
@@ -167,19 +192,19 @@ def stop_heating():
 
 
 def start_heating():
-    global heating, scr, boiler_ready, brewgroup_ready, timer_start_heating, timer_start, status
+    global heating, scr, boiler_ready, brewgroup_ready, timer_start_heating, timer_start, status, power_graph
+    power_graph = []
     heating = True
     boiler_ready = False
     brewgroup_ready = False
     status = None
     timer_start_heating = time.time()
     timer_start = time.time()
-    scr.set_style_bg_color(lv.color_hex(0xFA8072), lv.PART.MAIN)
     update_label()
 
 
 def get_status():
-    global last_status_pull, status, smartplug_ip, power_graph
+    global last_status_pull, status, smartplug_ip, power_graph, heating
     if not last_status_pull:
         last_status_pull = time.time()
     current = time.time()
@@ -187,7 +212,8 @@ def get_status():
     if elapsed_time > 5 or not status:
         last_status_pull = time.time()
         status = get_plug_status(smartplug_ip)
-        power_graph.append(status["power"])
+        if heating:
+            power_graph.append(status["power"])
     return status
 
 
@@ -207,14 +233,9 @@ def check_heating(status):
             consumption_low -= 1
         if consumption_low == 10:
             boiler_ready = True
-            scr.set_style_bg_color(lv.color_hex(0xFFA500), lv.PART.MAIN)
             buzzbuzz()
     elif elapsed_time > 1200 and not brewgroup_ready:
         timer_start = time.time()
-        scr.set_style_bg_color(lv.color_hex(0x98FB98), lv.PART.MAIN)
-        scr.set_style_text_color(
-            lv.color_hex(0x000000), lv.PART.MAIN
-        )  # Set text color to black
         brewgroup_ready = True
         buzzbuzz()
     elif brewgroup_ready and boiler_ready and elapsed_time > 60 * 5:
