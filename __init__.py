@@ -24,6 +24,8 @@ last_status_pull = None
 status = None
 power_graph = []
 graph_enabled = False
+chart = None
+series = None
 
 
 def get_settings_json():
@@ -40,10 +42,37 @@ def get_settings_json():
     }
 
 
+def display_graph():
+    # Chart help: https://docs.lvgl.io/8.2/widgets/extra/chart.html
+    global power_graph, scr, chart, series
+
+    # Create a chart if it doesn't exist
+    if not chart:
+        chart = lv.chart(lv.scr_act())
+        chart.set_size(320, 240)
+        chart.center()
+        # Add a data series if it doesn't exist
+        series = chart.add_series(lv.color_hex(0xFF0000), lv.chart.AXIS.PRIMARY_Y)
+
+    # Clear the existing data points
+    chart.set_point_count(len(power_graph))
+    chart.set_all_value(series, 0)
+
+    # Set data points
+    for value in power_graph:
+        value = int(value)
+        chart.set_next_value(series, value)
+    chart.refresh()
+
+
 def update_label():
-    global heating, brewgroup_ready, boiler_ready, timer_start_heating, graph_enabled
+    global heating, brewgroup_ready, boiler_ready, timer_start_heating, graph_enabled, chart
     if graph_enabled:
         display_graph()
+    elif chart:
+        print("Deleted chart")
+        chart.delete()
+        chart = None
     else:
         status = get_status()
         if status["relay"]:
@@ -67,7 +96,7 @@ def update_label():
 
 
 def event_handler(event):
-    global heating, boiler_ready, brewgroup_ready, scr
+    global heating, boiler_ready, brewgroup_ready, scr, graph_enabled
     if event.get_code() == lv.EVENT.KEY and event.get_key() == lv.KEY.ENTER:
         status = get_status()
         if status["relay"]:
@@ -80,6 +109,11 @@ def event_handler(event):
             start_heating()
         boiler_ready = False
         brewgroup_ready = False
+        update_label()
+    if event.get_code() == lv.EVENT.KEY and (
+        event.get_key() == lv.KEY.LEFT or event.get_key() == lv.KEY.RIGHT
+    ):
+        graph_enabled = not graph_enabled
         update_label()
 
 
@@ -150,43 +184,23 @@ def get_status():
         last_status_pull = time.time()
     current = time.time()
     elapsed_time = current - last_status_pull
-    if elapsed_time > 15 or not status:
+    if elapsed_time > 5 or not status:
         last_status_pull = time.time()
         status = get_plug_status(smartplug_ip)
         power_graph.append(status["power"])
     return status
 
 
-def display_graph():
-    global power_graph, scr
-    # Create a chart
-    chart = lv.chart(lv.scr_act())
-    chart.set_size(320, 240)
-    chart.center()
-
-    # Add a data series
-    series = chart.add_series(lv.color_hex(0xFF0000), lv.chart.AXIS.PRIMARY_Y)
-
-
-    # Set data points
-    for value in power_graph:
-        value = int(value)
-        chart.set_next_value(series, value)
-
-    # Refresh the display
-    lv.scr_load(lv.scr_act())
-
-
 def check_heating(status):
-    global consumption_low, brewgroup_ready, boiler_ready, scr, timer_start, graph_enabled
+    global consumption_low, brewgroup_ready, boiler_ready, scr, timer_start
     current = time.time()
     elapsed_time = current - timer_start
+
     if not status["relay"]:
         print("Machine is off?")
         stop_heating()
     elif elapsed_time > 10 and not boiler_ready:
         timer_start = time.time()
-        graph_enabled = True
         if float(status["power"]) < 800:
             consumption_low += 1
         elif consumption_low > 0:
@@ -196,7 +210,6 @@ def check_heating(status):
             scr.set_style_bg_color(lv.color_hex(0xFFA500), lv.PART.MAIN)
             buzzbuzz()
     elif elapsed_time > 1200 and not brewgroup_ready:
-        graph_enabled = True
         timer_start = time.time()
         scr.set_style_bg_color(lv.color_hex(0x98FB98), lv.PART.MAIN)
         scr.set_style_text_color(
