@@ -217,7 +217,7 @@ def get_status():
         last_status_pull = time.time()
     current = time.time()
     elapsed_time = current - last_status_pull
-    if elapsed_time > 5 or not status:
+    if elapsed_time > 15 or not status:
         last_status_pull = time.time()
         status = get_plug_status(smartplug_ip)
         if heating:
@@ -247,7 +247,7 @@ def check_heating(status):
         timer_start = time.time()
         brewgroup_ready = True
         buzzbuzz()
-    elif brewgroup_ready and boiler_ready and elapsed_time > 60 * 5:
+    elif brewgroup_ready and boiler_ready and elapsed_time > 60:
         timer_start = time.time()
         buzzbuzz()
 
