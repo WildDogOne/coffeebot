@@ -46,7 +46,7 @@ def get_settings_json():
 def display_graph():
     # Chart help: https://docs.lvgl.io/8.2/widgets/extra/chart.html
     global power_graph, scr, chart, series, power_graph_updated
-    if power_graph_updated:
+    if power_graph_updated or not chart:
         print("Updating chart")
         graph_offset = 0
         power_graph_updated = False
@@ -56,12 +56,12 @@ def display_graph():
             chart = lv.chart(lv.scr_act())
             chart.set_size(320 - graph_offset, 240)
             chart.center()
-            #chart.align(lv.ALIGN.CENTER, int(graph_offset / 2), 0)
+            # chart.align(lv.ALIGN.CENTER, int(graph_offset / 2), 0)
             chart.set_range(lv.chart.AXIS.PRIMARY_Y, 0, 1300)
             # TODO: Figure out how to set the number of ticks
             # LVGL v9.1 uses scale instead of set_axis_tick
-            #chart.set_axis_tick(lv.chart.AXIS.PRIMARY_Y, 3, 0, 5, 1, True, graph_offset)
-            #chart.set_total_tick_count(lv.chart.AXIS.PRIMARY_Y, 5)
+            # chart.set_axis_tick(lv.chart.AXIS.PRIMARY_Y, 3, 0, 5, 1, True, graph_offset)
+            # chart.set_total_tick_count(lv.chart.AXIS.PRIMARY_Y, 5)
             # Add a data series if it doesn't exist
             series = chart.add_series(lv.color_hex(0xFF0000), lv.chart.AXIS.PRIMARY_Y)
 
@@ -101,7 +101,6 @@ def update_label():
     set_background_color()
     if graph_enabled:
         display_graph()
-
     elif chart:
         print("Deleted chart")
         chart.delete()
