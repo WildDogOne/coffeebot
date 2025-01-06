@@ -86,7 +86,7 @@ def set_background_color():
         if heating and not brewgroup_ready and not boiler_ready:
             scr.set_style_bg_color(lv.color_hex(0xFA8072), lv.PART.MAIN)
         # Set background color to orange if heating and boiler ready but not brewgroup
-        if heating and brewgroup_ready and not boiler_ready:
+        if heating and boiler_ready and not brewgroup_ready:
             scr.set_style_bg_color(lv.color_hex(0xFFA500), lv.PART.MAIN)
         # Set background color to green if heating and both boiler and brewgroup ready
         if heating and brewgroup_ready and boiler_ready:
@@ -229,17 +229,19 @@ def check_heating(status):
     global consumption_low, brewgroup_ready, boiler_ready, scr, timer_start
     current = time.time()
     elapsed_time = current - timer_start
+    print(elapsed_time)
 
     if not status["relay"]:
         print("Machine is off?")
         stop_heating()
     elif elapsed_time > 10 and not boiler_ready:
+        print("Checking boiler")
         timer_start = time.time()
         if float(status["power"]) < 800:
             consumption_low += 1
         elif consumption_low > 0:
             consumption_low -= 1
-        if consumption_low == 10:
+        if consumption_low >= 10:
             boiler_ready = True
             buzzbuzz()
     elif elapsed_time > 1200 and not brewgroup_ready:
