@@ -1,7 +1,7 @@
 # coffeebot
 Coffee via Vobot
 ```
-
+docker pull vobot/mini-dock-app-dev:latest
 docker run \
     --rm -it \
     -v $(pwd):/work/disk/apps/coffeebot \
